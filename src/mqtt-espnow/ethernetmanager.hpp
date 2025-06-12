@@ -1,3 +1,4 @@
+#include <expected>
 #include "esp_eth.h"
 #include "esp_event.h"
 #include "esp_log.h"
@@ -23,7 +24,11 @@ public:
     EthernetManager(int eth_mdc_pin, int eth_mdio_pin)
         : eth_netif(nullptr), eth_handle(nullptr)
     {
-        init(eth_mdc_pin, eth_mdio_pin);
+        if (auto result = init(eth_mdc_pin, eth_mdio_pin); !result.has_value())
+        {
+            ESP_LOGE(TAG, "Failed to initialize EthernetManager: %s", esp_err_to_name(result.error()));
+        }
+        ESP_LOGI(TAG, "EthernetManager initialized successfully");
     }
     ~EthernetManager()
     {
@@ -38,14 +43,22 @@ public:
         }
     }
     
-    void init(int eth_mdc_pin, int eth_mdio_pin)
+    std::expected<void, esp_err_t> init(int eth_mdc_pin, int eth_mdio_pin)
     {
         esp_netif_config_t cfg = ESP_NETIF_DEFAULT_ETH();
         eth_netif = esp_netif_new(&cfg);
-
-        ESP_ERROR_CHECK(esp_event_handler_register(ETH_EVENT, ESP_EVENT_ANY_ID, &EthernetManager::eth_event_handler_static, this));
-        ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_ETH_GOT_IP, &EthernetManager::got_ip_event_handler_static, this));
-        ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_GOT_IP6, &EthernetManager::got_ip6_event_handler_static, this));
+        if (auto err = esp_event_handler_instance_register(ETH_EVENT, ESP_EVENT_ANY_ID, &EthernetManager::eth_event_handler_static, this, nullptr); err != ESP_OK)
+        {
+            return std::unexpected(err);
+        }
+        if (auto err = esp_event_handler_instance_register(IP_EVENT, IP_EVENT_ETH_GOT_IP, &EthernetManager::got_ip_event_handler_static, this, nullptr); err != ESP_OK)
+        {
+            return std::unexpected(err);
+        }
+        if (auto err = esp_event_handler_instance_register(IP_EVENT, IP_EVENT_GOT_IP6, &EthernetManager::got_ip6_event_handler_static, this, nullptr); err != ESP_OK)
+        {
+            return std::unexpected(err);
+        }
 
         eth_mac_config_t mac_config = ETH_MAC_DEFAULT_CONFIG();
         eth_phy_config_t phy_config = ETH_PHY_DEFAULT_CONFIG();
@@ -59,11 +72,28 @@ public:
         auto *phy = esp_eth_phy_new_lan87xx(&phy_config);
 
         esp_eth_config_t eth_config = ETH_DEFAULT_CONFIG(mac, phy);
-        ESP_ERROR_CHECK(esp_eth_driver_install(&eth_config, &eth_handle));
-        ESP_ERROR_CHECK(esp_netif_attach(eth_netif, esp_eth_new_netif_glue(eth_handle)));
-        ESP_ERROR_CHECK(esp_eth_start(eth_handle));
-        ESP_ERROR_CHECK(esp_netif_set_hostname(eth_netif, "mqtt-espnow"));
-        ESP_ERROR_CHECK(esp_netif_create_ip6_linklocal(eth_netif));
+        if (auto err = esp_eth_driver_install(&eth_config, &eth_handle); err != ESP_OK)
+        {
+            return std::unexpected(err);
+        }
+        if (auto err = esp_netif_attach(eth_netif, esp_eth_new_netif_glue(eth_handle)); err != ESP_OK)
+        {
+            return std::unexpected(err);
+        }
+        if (auto err = esp_eth_start(eth_handle); err != ESP_OK)
+        {
+            return std::unexpected(err);
+        }
+        if (auto err = esp_netif_set_hostname(eth_netif, "mqtt-espnow"); err != ESP_OK)
+        {
+            return std::unexpected(err);
+        }
+        if (auto err = esp_netif_create_ip6_linklocal(eth_netif); err != ESP_OK)
+        {
+            return std::unexpected(err);
+        }
+        vTaskDelay(pdMS_TO_TICKS(3000));
+        return {};
     }
 
 private:
