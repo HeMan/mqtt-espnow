@@ -17,7 +17,6 @@
 
 // Removed global TAG, will add as private member in class
 
-
 class EthernetManager
 {
 public:
@@ -42,7 +41,7 @@ public:
             esp_netif_destroy(eth_netif);
         }
     }
-    
+
     std::expected<void, esp_err_t> init(int eth_mdc_pin, int eth_mdio_pin)
     {
         esp_netif_config_t cfg = ESP_NETIF_DEFAULT_ETH();
