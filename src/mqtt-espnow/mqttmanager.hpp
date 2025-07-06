@@ -11,6 +11,7 @@ public:
     MqttManager(const std::string &broker_uri = "mqtt://broker.hivemq.com")
         : broker_uri_(broker_uri), mqtt_client_(nullptr)
     {
+        instance() = this;
     }
 
     std::expected<void, esp_err_t> connect()
@@ -106,5 +107,10 @@ private:
             ESP_LOGI(MQTT_TAG, "Other event id:%d", event->event_id);
             break;
         }
+    }
+    static MqttManager *&instance()
+    {
+        static MqttManager *inst = nullptr;
+        return inst;
     }
 };
