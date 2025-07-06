@@ -8,17 +8,10 @@
 #include "esp_chip_info.h"
 #include "esp_flash.h"
 
-#include "esp_eth.h"
-#include "esp_event.h"
 #include "esp_log.h"
 #include "sdkconfig.h"
 #include "esp_system.h"
 #include "esp_err.h"
-
-#include "esp_now.h"
-#include "esp_wifi.h"
-
-#include "mqtt_client.h"
 
 #include "ethernetmanager.hpp"
 #include "espnowmanager.hpp"
