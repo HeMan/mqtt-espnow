@@ -1,0 +1,11 @@
+{
+  "name": "mqtt-espnow",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "workspaceFolder": "/workspaces/mqtt-espnow",
+  "remoteUser": "vscode",
+  "updateRemoteUserUID": true,
+  "postCreateCommand": "uv sync --locked --no-install-project --python-preference system"
+}
